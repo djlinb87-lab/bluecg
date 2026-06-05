@@ -2,397 +2,174 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>水藍魔力 - 全裝備配方材料計算器</title>
+    <title>魔力寶貝藍色星空 - 裝備道具素材檢視器</title>
     <style>
-        :root {
-            --primary: #3498db;
-            --dark: #2c3e50;
-            --light: #ecf0f1;
-            --success: #2ecc71;
-            --warning: #f39c12;
-        }
-        body {
-            font-family: "Segoe UI", "Microsoft JhengHei", sans-serif;
-            background-color: #f4f6f8;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            gap: 20px;
-        }
-        .left-panel {
-            flex: 2;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-        }
-        .right-panel {
-            flex: 1;
-            background: white;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            position: sticky;
-            top: 20px;
-            height: calc(100vh - 80px);
-            display: flex;
-            flex-direction: column;
-        }
-        h2 {
-            color: var(--dark);
-            border-bottom: 2px solid var(--primary);
-            padding-bottom: 8px;
-            margin-top: 0;
-        }
+        body { font-family: "Segoe UI", "Microsoft JhengHei", sans-serif; background: #f4f4f9; padding: 20px; margin: 0; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
         
-        /* 篩選列優化 */
-        .filter-bar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-bottom: 20px;
-            background: #fdfefe;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
-        .filter-group {
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            flex: 1;
-            min-width: 120px;
-        }
-        .filter-group.search { flex: 2; }
-        .filter-bar label {
-            font-size: 12px;
-            font-weight: bold;
-            color: #7f8c8d;
-        }
-        .filter-bar input, .filter-bar select {
-            padding: 8px 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            font-size: 14px;
-            outline: none;
-        }
-        .filter-bar input:focus, .filter-bar select:focus {
-            border-color: var(--primary);
-        }
+        /* 大分類按鈕樣式 */
+        .filter-btn { padding: 10px 20px; margin-right: 10px; margin-bottom: 10px; cursor: pointer; border: none; background: #ddd; border-radius: 6px; font-weight: bold; font-size: 14px; transition: all 0.2s; }
+        .filter-btn:hover { background: #ccc; }
+        .filter-btn.active { background: #3498db; color: white; }
+        
+        /* 【全新】子分類小標籤區域與樣式 */
+        .sub-filter-container { margin-top: 5px; margin-bottom: 15px; padding: 10px; background: #e2e8f0; border-radius: 8px; display: none; gap: 8px; flex-wrap: wrap; }
+        .sub-btn { padding: 6px 14px; cursor: pointer; border: 1px solid #cbd5e1; background: white; border-radius: 20px; font-size: 12px; font-weight: bold; color: #475569; transition: all 0.2s; }
+        .sub-btn:hover { background: #f1f5f9; }
+        .sub-btn.active { background: #1e293b; color: white; border-color: #1e293b; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-        th {
-            background-color: var(--dark);
-            color: white;
-        }
-        .badge {
-            background: var(--warning);
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-        .type-badge {
-            background: #9b59b6;
-            color: white;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 11px;
-            margin-left: 5px;
-        }
-        .qty-input {
-            width: 50px;
-            padding: 5px;
-            text-align: center;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        .btn-add {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .btn-add:hover { background: #2980b9; }
-        
-        .cart-list, .summary-list {
-            overflow-y: auto;
-            flex: 1;
-            margin-bottom: 15px;
-            border: 1px solid #eee;
-            border-radius: 6px;
-            padding: 10px;
-            background: #fafafa;
-        }
-        .cart-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        .btn-del {
-            background: #e74c3c;
-            color: white;
-            border: none;
-            border-radius: 3px;
-            cursor: pointer;
-            padding: 2px 6px;
-        }
-        .mat-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            border-bottom: 1px dashed #ddd;
-        }
-        .mat-name { font-weight: bold; color: #27ae60; }
-        .mat-count { background: #e8f8f5; padding: 2px 8px; border-radius: 10px; color: #117a65; font-weight: bold; }
-        .clear-btn {
-            background: #95a5a6;
-            color: white;
-            border: none;
-            padding: 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-        }
+        /* 卡片排版 */
+        .item-list { margin-top: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px; }
+        .item-card { background: white; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .item-title { font-size: 1.2em; font-weight: bold; color: #2c3e50; margin-bottom: 5px; }
+        .item-meta { color: #7f8c8d; font-size: 0.9em; margin-bottom: 10px; }
+        .mat-tag { background: #e8f8f5; color: #117a65; padding: 4px 8px; margin: 4px 4px 4px 0; display: inline-block; border-radius: 4px; font-size: 0.9em; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="left-panel">
-        <h2>水藍魔力 - 全裝備配方清單</h2>
-        
-        <div class="filter-bar">
-            <div class="filter-group search">
-                <label>關鍵字搜尋</label>
-                <input type="text" id="searchBar" placeholder="搜尋裝備或材料..." oninput="filterData()">
-            </div>
-            <div class="filter-group">
-                <label>大分類</label>
-                <select id="categoryFilter" onchange="updateTypeOptions(); filterData();">
-                    <option value="">全部類別</option>
-                    <option value="武器">武器 ⚔️</option>
-                    <option value="防具">防具 🛡️</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>裝備種類</label>
-                <select id="typeFilter" onchange="filterData()">
-                    <option value="">全部種類</option>
-                </select>
-            </div>
-            <div class="filter-group">
-                <label>裝備等級</label>
-                <select id="levelFilter" onchange="filterData()">
-                    <option value="">所有等級</option>
-                    <option value="1">R1</option>
-                    <option value="2">R2</option>
-                    <option value="3">R3</option>
-                    <option value="4">R4</option>
-                    <option value="5">R5</option>
-                    <option value="6">R6</option>
-                    <option value="7">R7</option>
-                    <option value="8">R8</option>
-                    <option value="9">R9</option>
-                    <option value="10">R10</option>
-                    <option value="11">R11</option>
-                </select>
-            </div>
-        </div>
-
-        <table>
-            <thead>
-                <tr>
-                    <th style="width: 100px;">級別 / 種類</th>
-                    <th style="width: 160px;">裝備名稱</th>
-                    <th>配方內容</th>
-                    <th style="width: 120px;">操作</th>
-                </tr>
-            </thead>
-            <tbody id="equipTableBody"></tbody>
-        </table>
+    <h1>⚔️ 魔力寶貝素材資料庫 (動態細項版)</h1>
+    
+    <div id="filter-container">
+        <button class="filter-btn active" onclick="selectMainCategory(this, '全部')">全部項目 ✨</button>
+        <button class="filter-btn" onclick="selectMainCategory(this, '武器')">武器 ⚔️</button>
+        <button class="filter-btn" onclick="selectMainCategory(this, '防具')">防具 🛡️</button>
+        <button class="filter-btn" onclick="selectMainCategory(this, '寵物裝備')">寵物裝備 🐾</button>
+        <button class="filter-btn" onclick="selectMainCategory(this, '其他')">其他道具 🧪</button>
     </div>
 
-    <div class="right-panel">
-        <h2>預計製作清單</h2>
-        <div class="cart-list" id="cartList">
-            <p style="color:#999; text-align:center; margin-top:20px;">尚未選取任何裝備</p>
-        </div>
+    <div class="sub-filter-container" id="subFilterContainer"></div>
 
-        <h2>所需總材料統計</h2>
-        <div class="summary-list" id="summaryList">
-            <p style="color:#999; text-align:center; margin-top:20px;">請先添加裝備</p>
-        </div>
-        
-        <button class="clear-btn" onclick="clearCart()">清空全部選擇</button>
-    </div>
+    <div class="item-list" id="item-display-zone"></div>
 
     <script src="data.js"></script>
+    
     <script>
-        let cart = {};
+        let currentMainCat = '全部';
+        let currentSubCat = '全部';
 
-        // 根據大分類動態更新子種類的選單內容
-        function updateTypeOptions() {
-            const cat = document.getElementById('categoryFilter').value;
-            const typeSelect = document.getElementById('typeFilter');
-            
-            // 先清空
-            typeSelect.innerHTML = '<option value="">全部種類</option>';
-            
-            const weaponTypes = ["劍", "斧", "矛", "杖", "弓", "投擲武器", "小刀"];
-            const armorTypes = ["盾牌", "衣服", "帽子", "頭盔", "鎧甲", "長袍", "鞋子", "靴子"];
-            
-            let listToUse = [];
-            if (cat === "武器") listToUse = weaponTypes;
-            else if (cat === "防具") listToUse = armorTypes;
-            else listToUse = [...weaponTypes, ...armorTypes]; // 如果選全部就融合
-            
-            listToUse.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t;
-                opt.textContent = t;
-                typeSelect.appendChild(opt);
-            });
+        window.onload = function() {
+            renderPage();
+        };
+
+        // 處理主分類點擊
+        function selectMainCategory(btnElement, mainCategory) {
+            // 切換主按鈕高亮
+            const buttons = document.querySelectorAll('.filter-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            currentMainCat = mainCategory;
+            currentSubCat = '全部'; // 切換大類時，子類預設歸零
+
+            // 更新第二層子分類按鈕
+            updateSubCategoryButtons();
+            // 刷新卡片
+            renderItems();
         }
 
-        function renderTable(data) {
-            const tbody = document.getElementById('equipTableBody');
-            tbody.innerHTML = '';
-            
-            data.forEach(item => {
-                let matText = [];
-                for (let [mat, num] of Object.entries(item.materials)) {
-                    matText.push(`${mat} x${num}`);
-                }
-                
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>
-                        <span class="badge">R${item.level}</span>
-                        <span class="type-badge">${item.type}</span>
-                    </td>
-                    <td class="equip-name" title="${item.note}">${item.name}</td>
-                    <td style="color: #444; font-size: 13px;">
-                        <strong>${matText.join('、 ')}</strong>
-                        <br><small style="color:#888">${item.note}</small>
-                    </td>
-                    <td>
-                        <input type="number" id="qty-${item.id}" class="qty-input" value="1" min="1">
-                        <button class="btn-add" onclick="addToCart(${item.id})">加入</button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
+        // 動態生成第二層子分類細項按鈕
+        function updateSubCategoryButtons() {
+            const subContainer = document.getElementById('subFilterContainer');
+            subContainer.innerHTML = ''; // 清空舊按鈕
 
-        function filterData() {
-            const keyword = document.getElementById('searchBar').value.toLowerCase();
-            const category = document.getElementById('categoryFilter').value;
-            const type = document.getElementById('typeFilter').value;
-            const level = document.getElementById('levelFilter').value;
-            
-            const filtered = equipments.filter(item => {
-                const matsString = Object.keys(item.materials).join(',').toLowerCase();
-                const matchesKeyword = item.name.toLowerCase().includes(keyword) || 
-                                       item.note.toLowerCase().includes(keyword) ||
-                                       matsString.includes(keyword);
-                
-                const matchesCategory = category === "" || item.category === category;
-                const matchesType = type === "" || item.type === type;
-                const matchesLevel = level === "" || item.level == level;
-                
-                return matchesKeyword && matchesCategory && matchesType && matchesLevel;
-            });
-            
-            renderTable(filtered);
-        }
-
-        function addToCart(id) {
-            const qtyInput = document.getElementById(`qty-${id}`);
-            const qty = parseInt(qtyInput.value) || 1;
-            
-            if (cart[id]) cart[id] += qty;
-            else cart[id] = qty;
-            
-            updateUI();
-        }
-
-        function removeFromCart(id) {
-            delete cart[id];
-            updateUI();
-        }
-
-        function clearCart() {
-            cart = {};
-            updateUI();
-        }
-
-        function updateUI() {
-            const cartList = document.getElementById('cartList');
-            const summaryList = document.getElementById('summaryList');
-            
-            if (Object.keys(cart).length === 0) {
-                cartList.innerHTML = '<p style="color:#999; text-align:center; margin-top:20px;">尚未選取任何裝備</p>';
-                summaryList.innerHTML = '<p style="color:#999; text-align:center; margin-top:20px;">請先添加裝備</p>';
+            // 如果選「全部」，就不需要顯示第二層
+            if (currentMainCat === '全部') {
+                subContainer.style.display = 'none';
                 return;
             }
-            
-            cartList.innerHTML = '';
-            let totalMaterials = {};
-            
-            for (let [id, qty] of Object.entries(cart)) {
-                const item = equipments.find(e => e.id == id);
-                if (!item) continue;
-                
-                const div = document.createElement('div');
-                div.className = 'cart-item';
-                div.innerHTML = `
-                    <span>[${item.type}] <strong>${item.name}</strong> × <strong>${qty}</strong> 件</span>
-                    <button class="btn-del" onclick="removeFromCart(${id})">刪除</button>
-                `;
-                cartList.appendChild(div);
-                
-                for (let [matName, matQty] of Object.entries(item.materials)) {
-                    if (totalMaterials[matName]) {
-                        totalMaterials[matName] += (matQty * qty);
-                    } else {
-                        totalMaterials[matName] = (matQty * qty);
+
+            // 利用 Set 自動去重，撈出目前 data.js 裡該大類別擁有的所有細項 type
+            let subTypes = new Set();
+            if (typeof equipments !== 'undefined') {
+                equipments.forEach(item => {
+                    if (item.category === currentMainCat && item.type) {
+                        subTypes.add(item.type);
                     }
-                }
+                });
             }
-            
-            summaryList.innerHTML = '';
-            for (let [matName, totalQty] of Object.entries(totalMaterials)) {
-                const div = document.createElement('div');
-                div.className = 'mat-item';
-                div.innerHTML = `
-                    <span class="mat-name">${matName}</span>
-                    <span class="mat-count">${totalQty} 個</span>
+
+            // 如果撈出來的細項少於或等於 1 個，也沒必要選了，直接隱藏
+            if (subTypes.size <= 1) {
+                subContainer.style.display = 'none';
+                return;
+            }
+
+            subContainer.style.display = 'flex'; // 顯示子分類容器
+
+            // 建立一個「全部 [子類]」的預設按鈕
+            const allSubBtn = document.createElement('button');
+            allSubBtn.className = 'sub-btn active';
+            allSubBtn.textContent = `全部${currentMainCat}細項`;
+            allSubBtn.onclick = function() { changeSubCategory(this, '全部'); };
+            subContainer.appendChild(allSubBtn);
+
+            // 把撈出來的細項（如：寵物晶石、炸彈）做成按鈕
+            Array.from(subTypes).sort().forEach(type => {
+                const btn = document.createElement('button');
+                btn.className = 'sub-btn';
+                btn.textContent = type;
+                btn.onclick = function() { changeSubCategory(this, type); };
+                subContainer.appendChild(btn);
+            });
+        }
+
+        // 處理子分類細項點擊
+        function changeSubCategory(btnElement, subCategory) {
+            // 切換小按鈕高亮
+            const subButtons = document.querySelectorAll('.sub-btn');
+            subButtons.forEach(btn => btn.classList.remove('active'));
+            btnElement.classList.add('active');
+
+            currentSubCat = subCategory;
+            renderItems();
+        }
+
+        // 渲染卡片核心邏輯
+        function renderItems() {
+            const container = document.getElementById('item-display-zone');
+            container.innerHTML = ''; 
+
+            // 雙層過濾條件
+            const filteredData = equipments.filter(item => {
+                // 1. 先過濾大分類
+                const matchMain = (currentMainCat === '全部' || item.category === currentMainCat);
+                // 2. 再過濾細項種類
+                const matchSub = (currentSubCat === '全部' || item.type === currentSubCat);
+                
+                return matchMain && matchSub;
+            });
+
+            // 生成卡片 HTML
+            filteredData.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+
+                let materialsHTML = '';
+                for (const [matName, qty] of Object.entries(item.materials)) {
+                    materialsHTML += `<span class="mat-tag">📦 ${matName} x ${qty}</span>`;
+                }
+
+                card.innerHTML = `
+                    <div class="item-title">[R${item.level}] ${item.name}</div>
+                    <div class="item-meta">分類: ${item.category} ➔ 細項: <strong>${item.type}</strong></div>
+                    <div class="item-materials">${materialsHTML}</div>
                 `;
-                summaryList.appendChild(div);
+                container.appendChild(card);
+            });
+
+            if(filteredData.length === 0) {
+                container.innerHTML = '<div style="color:gray; padding:20px;">暫無此分類資料</div>';
             }
         }
 
-        // 初始化載入
-        if (typeof equipments !== 'undefined') {
-            updateTypeOptions();
-            renderTable(equipments);
-        } else {
-            alert("找不到 data.js，請先利用 Python 腳本產生資料！");
+        function renderPage() {
+            if (typeof equipments !== 'undefined') {
+                updateSubCategoryButtons();
+                renderItems();
+            } else {
+                document.getElementById('item-display-zone').innerHTML = '<div style="color:red; padding:20px; font-weight:bold;">找不到 data.js，請先利用 Python 腳本產生資料！</div>';
+            }
         }
     </script>
 </body>
