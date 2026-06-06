@@ -183,7 +183,7 @@
             </div>
             <div class="filter-group">
                 <label>大分類</label>
-                <select id="categoryFilter" onchange="updateTypeOptions(); filterData();">
+                <select id="categoryFilter" onchange="changeCategory()">
                     <option value="">全部類別</option>
                     <option value="武器">武器 ⚔️</option>
                     <option value="防具">防具 🛡️</option>
@@ -243,9 +243,64 @@
         <button class="clear-btn" onclick="clearCart()">清空全部選擇</button>
     </div>
 
-    <script src="data.js"></script>
+    
     <script>
-        let cart = {};
+        
+let equipments = [];
+let cart = {};
+
+const categoryFiles = {
+    "武器": ["sword","axe","spear","bow","staff","throw","knife"],
+    "防具": ["armor","cloth","robe","boots","helm","hat","shield","shoes"],
+    "寵物裝備": ["pet_crystal","pet_collar","pet_heavy","pet_accessory","pet_light"],
+    "其他": ["accessory","bomb","food","potion","injury_med","heal_med","card"]
+};
+
+async function loadCategoryData(category) {
+
+    equipments = [];
+
+    if (!category) {
+        updateTypeOptions();
+        renderTable([]);
+        return;
+    }
+
+    const files = categoryFiles[category] || [];
+
+    for (const file of files) {
+        await new Promise((resolve, reject) => {
+
+            const script = document.createElement("script");
+
+            script.src = `./data/data_${file}.js?t=${Date.now()}`;
+
+            script.onload = () => {
+
+                if (window.equipments) {
+                    equipments.push(...window.equipments);
+                }
+
+                script.remove();
+                resolve();
+            };
+
+            script.onerror = reject;
+
+            document.body.appendChild(script);
+        });
+    }
+
+    updateTypeOptions();
+    filterData();
+}
+
+async function changeCategory() {
+    await loadCategoryData(
+        document.getElementById('categoryFilter').value
+    );
+}
+
 
         // 【大升級】不再把種類寫死，而是根據 data.js 動態分析撈出種類！
         function updateTypeOptions() {
@@ -313,7 +368,7 @@
             const type = document.getElementById('typeFilter').value;
             const level = document.getElementById('levelFilter').value;
             
-            const filtered = equipments.filter(item => {
+            const filtered = (equipments || []).filter(item => {
                 const matsString = Object.keys(item.materials).join(',').toLowerCase();
                 const matchesKeyword = item.name.toLowerCase().includes(keyword) || 
                                        (item.note && item.note.toLowerCase().includes(keyword)) ||
@@ -398,12 +453,7 @@
         }
 
         // 初始化載入
-        if (typeof equipments !== 'undefined') {
-            updateTypeOptions();
-            renderTable(equipments);
-        } else {
-            alert("找不到 data.js，請先利用 Python 腳本產生資料！");
-        }
+        renderTable([]);
     </script>
 </body>
 </html>
