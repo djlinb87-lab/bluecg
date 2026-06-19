@@ -1,26 +1,25 @@
 import json
 import re
 
+import json
+import re
 
 def load_js_array(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    match = re.search(
-        r"const\s+\w+\s*=\s*(\[.*\])\s*;",
-        content,
-        re.DOTALL
-    )
+    # 修改重點：匹配 window.equipments = [...]
+    match = re.search(r"window\.equipments\s*=\s*(\[.*\])\s*;", content, re.DOTALL)
 
     if not match:
-        raise Exception("找不到陣列資料")
+        raise Exception(f"找不到陣列資料，請檢查檔案格式: {file_path}")
 
     return json.loads(match.group(1))
 
-
 def save_js_array(file_path, data):
+    # 修改重點：存檔時補上 window.equipments = 
     content = (
-        "const equipments = "
+        "window.equipments = "
         + json.dumps(data, ensure_ascii=False, indent=2)
         + ";\n"
     )
@@ -28,113 +27,39 @@ def save_js_array(file_path, data):
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
 
+# run_batch_hacks 的邏輯保持不變即可
 
-def hack(file, **kwargs):
-    data = load_js_array(file)
+def run_batch_hacks(config_file):
+    # 讀取你的設定 JSON
+    with open(config_file, "r", encoding="utf-8") as f:
+        tasks = json.load(f)
 
-    patch_fields = {
-        "materials",
-        "note",
-        "level",
-        "id"
-    }
-
-    condition = {}
-    patch = {}
-
-    for key, value in kwargs.items():
-        if key in patch_fields:
-            patch[key] = value
+    # 為了避免重複讀寫同一個檔案，我們可以先把要修改的分類存好
+    # 這裡簡化流程：直接遍歷執行
+    for task in tasks:
+        file = task.pop("file") # 取出目標檔案路徑
+        print(f"\n正在處理檔案: {file}")
+        
+        # 讀取 JS 資料
+        data = load_js_array(file)
+        
+        # 區分條件與要修改的內容
+        patch_fields = {"materials", "note", "level", "id"}
+        condition = {k: v for k, v in task.items() if k not in patch_fields}
+        patch = {k: v for k, v in task.items() if k in patch_fields}
+        
+        found = False
+        for item in data:
+            if all(item.get(k) == v for k, v in condition.items()):
+                item.update(patch)
+                found = True
+                print(f"  -> 已修改: {item.get('name', 'Unknown')}")
+        
+        if found:
+            save_js_array(file, data)
         else:
-            condition[key] = value
+            print("  -> 找不到符合條件的資料")
 
-    found = False
-
-    for item in data:
-        if all(item.get(k) == v for k, v in condition.items()):
-            item.update(patch)
-            found = True
-            print(f"已修改: {item['name']}")
-
-    if found:
-        save_js_array(file, data)
-    else:
-        print("找不到符合條件的資料")
-        
-        
-        
 if __name__ == "__main__":
-    hack(
-        file="data/data_pet_light.js",
-        name="時尚圍巾",
-        materials={
-            "絲線": 10,
-            "阿巴尼斯棉線": 10,
-            "白金條": 10,
-            "杉": 10
-        }
-    )
-    hack(
-        file="data/data_pet_accessory.js",
-        name="幻想鈴鐺",
-        materials={
-            "開米士棉線": 15,
-            "絲柏": 15,
-            "梣": 15,
-            "七葉樹": 20
-        }
-    )
-    hack(
-        file="data/data_pet_heavy.js",
-        name="翡翠手甲",
-        materials={
-            "勒格耐席鉧條": 15,
-            "傑諾瓦毛線": 20,
-            "芎麻布": 10,
-            "朴": 5,
-            "風龍蜥的甲殼": 1
-        },
-    )
-    hack(
-        file="data/data_pet_collar.js",
-        name="銅頸圈",
-        materials={
-            "銅條": 10,
-            "銀條": 20,
-            "薄棉布": 20,
-            "樅": 10,
-        },
-    )
-    hack(
-        file="data/data_pet_collar.js",
-        name="自然項圈",
-        materials={
-            "白金條": 20,
-            "幻之鋼條": 10,
-            "傑諾瓦毛線": 20,
-            "杉": 10,
-            "永久冰石": 3
-        },
-    )
-    hack(
-        file="data/data_shoes.js",
-        name="水龍之鞋",
-        materials={
-            "破損的鞋": 1,
-            "鋼騎之礦": 2,
-            "魔族的水晶": 2,
-            "朴": 20
-        },
-    )
-    hack(
-        file="data/data_shoes.js",
-        name="大木屐",
-        materials={
-              "鋁條": 20,
-              "勒格耐席姆條": 14,
-              "單木": 40,
-              "梣": 40,
-              "風龍蜥的甲殼": 2
-
-        },
-    )
+    # 一口氣執行所有定義在 JSON 裡的修改
+    run_batch_hacks("patch_config.json")
